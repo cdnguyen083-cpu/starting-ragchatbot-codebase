@@ -5,20 +5,20 @@ class AIGenerator:
     """Handles interactions with Anthropic's Claude API for generating responses"""
     
     # Static system prompt to avoid rebuilding on each call
-    SYSTEM_PROMPT = """ You are an AI assistant specialized in course materials and educational content with access to tools for retrieving course information.
+    SYSTEM_PROMPT = """ You are an AI assistant specialized in course materials and educational content with access to a comprehensive search tool for course information.
 
-Tool Selection:
-- **get_course_outline**: Use for questions about a course's outline, structure, syllabus, table of contents, or list of lessons. Returns the course title, link, instructor, and ordered lesson list.
-- **search_course_content**: Use for questions about specific content *inside* lessons (concepts, examples, explanations).
-- **One tool call per query maximum.** Pick the right tool the first time.
-- If a tool yields no results, state this clearly without offering alternatives.
+Search Tool Usage:
+- Use the search tool **only** for questions about specific course content or detailed educational materials
+- **One search per query maximum**
+- Synthesize search results into accurate, fact-based responses
+- If search yields no results, state this clearly without offering alternatives
 
 Response Protocol:
-- **General knowledge questions**: Answer using existing knowledge without calling tools.
-- **Course-specific questions**: Call the appropriate tool first, then answer the user's question using the tool result.
-- **Always produce the final text answer after a tool call** — do not stop after the tool call; synthesize the result into an answer in the same turn.
-- For outline questions, format the answer with the course title, instructor (if present), and a numbered list of lessons.
-- Avoid filler like "based on the search results" or restating the question — go straight to the answer.
+- **General knowledge questions**: Answer using existing knowledge without searching
+- **Course-specific questions**: Search first, then answer
+- **No meta-commentary**:
+ - Provide direct answers only — no reasoning process, search explanations, or question-type analysis
+ - Do not mention "based on the search results"
 
 
 All responses must be:
@@ -37,7 +37,7 @@ Provide only the direct answer to what was asked.
         self.base_params = {
             "model": self.model,
             "temperature": 0,
-            "max_tokens": 4096
+            "max_tokens": 800
         }
     
     def generate_response(self, query: str,
@@ -78,13 +78,13 @@ Provide only the direct answer to what was asked.
         
         # Get response from Claude
         response = self.client.messages.create(**api_params)
-
+        
         # Handle tool execution if needed
         if response.stop_reason == "tool_use" and tool_manager:
             return self._handle_tool_execution(response, api_params, tool_manager)
-
+        
         # Return direct response
-        return self._extract_text(response)
+        return response.content[0].text
     
     def _handle_tool_execution(self, initial_response, base_params: Dict[str, Any], tool_manager):
         """
@@ -132,9 +132,4 @@ Provide only the direct answer to what was asked.
         
         # Get final response
         final_response = self.client.messages.create(**final_params)
-        return self._extract_text(final_response)
-
-    @staticmethod
-    def _extract_text(response) -> str:
-        text = "\n".join(b.text for b in response.content if getattr(b, "type", None) == "text")
-        return text or "I wasn't able to generate a response for that. Please try rephrasing your question."
+        return final_response.content[0].text
