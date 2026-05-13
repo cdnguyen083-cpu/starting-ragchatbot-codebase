@@ -26,6 +26,9 @@ uploads/
 *.swp
 *.swo
 
+# Claude Code (per-user overrides)
+.claude/settings.local.json
+
 # OS
 .DS_Store
 Thumbs.db
