@@ -122,10 +122,16 @@ function addMessage(content, type, sources = null, isWelcome = false) {
     let html = `<div class="message-content">${displayContent}</div>`;
     
     if (sources && sources.length > 0) {
+        const rendered = sources.map(s => {
+            const label = escapeHtml(s.label);
+            return s.url
+                ? `<a class="source-chip" href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer">${label}</a>`
+                : `<span class="source-chip">${label}</span>`;
+        }).join('');
         html += `
             <details class="sources-collapsible">
                 <summary class="sources-header">Sources</summary>
-                <div class="sources-content">${sources.join(', ')}</div>
+                <div class="sources-content">${rendered}</div>
             </details>
         `;
     }

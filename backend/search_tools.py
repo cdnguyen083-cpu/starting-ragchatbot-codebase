@@ -101,11 +101,16 @@ class CourseSearchTool(Tool):
             header += "]"
             
             # Track source for the UI
-            source = course_title
+            source_label = course_title
             if lesson_num is not None:
-                source += f" - Lesson {lesson_num}"
-            sources.append(source)
-            
+                source_label += f" - Lesson {lesson_num}"
+            source_url = (
+                self.store.get_lesson_link(course_title, lesson_num)
+                if lesson_num is not None
+                else None
+            )
+            sources.append({"label": source_label, "url": source_url})
+
             formatted.append(f"{header}\n{doc}")
         
         # Store sources for retrieval
@@ -178,10 +183,9 @@ class CourseOutlineTool(Tool):
             num = lesson.get("lesson_number")
             title = lesson.get("lesson_title", "")
             link = lesson.get("lesson_link")
-            label = f"Lesson {num}: {title}"
-            sources.append(f"{label} — {link}" if link else label)
+            sources.append({"label": f"Lesson {num}: {title}", "url": link})
         if not sources and course_link:
-            sources.append(f"{resolved_title} — {course_link}")
+            sources.append({"label": resolved_title, "url": course_link})
         self.last_sources = sources
 
         return "\n".join(lines)
