@@ -89,18 +89,25 @@ class CourseSearchTool(Tool):
         """Format search results with course and lesson context"""
         formatted = []
         sources = []  # Track sources for the UI
-        
+        seen_sources = set()  # Dedup chips when multiple chunks share a lesson
+
         for doc, meta in zip(results.documents, results.metadata):
             course_title = meta.get('course_title', 'unknown')
             lesson_num = meta.get('lesson_number')
-            
+
             # Build context header
             header = f"[{course_title}"
             if lesson_num is not None:
                 header += f" - Lesson {lesson_num}"
             header += "]"
-            
-            # Track source for the UI
+
+            formatted.append(f"{header}\n{doc}")
+
+            source_key = (course_title, lesson_num)
+            if source_key in seen_sources:
+                continue
+            seen_sources.add(source_key)
+
             source_label = course_title
             if lesson_num is not None:
                 source_label += f" - Lesson {lesson_num}"
@@ -111,8 +118,6 @@ class CourseSearchTool(Tool):
             )
             sources.append({"label": source_label, "url": source_url})
 
-            formatted.append(f"{header}\n{doc}")
-        
         # Store sources for retrieval
         self.last_sources = sources
 
