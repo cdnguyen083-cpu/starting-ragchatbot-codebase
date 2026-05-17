@@ -5,7 +5,7 @@ const API_URL = '/api';
 let currentSessionId = null;
 
 // DOM elements
-let chatMessages, chatInput, sendButton, totalCourses, courseTitles;
+let chatMessages, chatInput, sendButton, totalCourses, courseTitles, newChatButton;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -15,7 +15,8 @@ document.addEventListener('DOMContentLoaded', () => {
     sendButton = document.getElementById('sendButton');
     totalCourses = document.getElementById('totalCourses');
     courseTitles = document.getElementById('courseTitles');
-    
+    newChatButton = document.getElementById('newChatButton');
+
     setupEventListeners();
     createNewSession();
     loadCourseStats();
@@ -38,6 +39,25 @@ function setupEventListeners() {
             sendMessage();
         });
     });
+
+    // New chat button
+    newChatButton.addEventListener('click', startNewChat);
+}
+
+async function startNewChat() {
+    const oldSessionId = currentSessionId;
+    createNewSession();
+    if (oldSessionId) {
+        try {
+            await fetch(`${API_URL}/session/clear`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_id: oldSessionId })
+            });
+        } catch (err) {
+            console.warn('Failed to clear session on backend:', err);
+        }
+    }
 }
 
 
