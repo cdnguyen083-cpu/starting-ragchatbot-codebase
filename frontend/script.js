@@ -5,7 +5,7 @@ const API_URL = '/api';
 let currentSessionId = null;
 
 // DOM elements
-let chatMessages, chatInput, sendButton, totalCourses, courseTitles, newChatButton;
+let chatMessages, chatInput, sendButton, totalCourses, courseTitles, newChatButton, themeToggle;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -16,11 +16,46 @@ document.addEventListener('DOMContentLoaded', () => {
     totalCourses = document.getElementById('totalCourses');
     courseTitles = document.getElementById('courseTitles');
     newChatButton = document.getElementById('newChatButton');
+    themeToggle = document.getElementById('themeToggle');
 
+    initTheme();
     setupEventListeners();
     createNewSession();
     loadCourseStats();
 });
+
+// Theme handling
+const THEME_KEY = 'theme';
+
+function applyTheme(theme) {
+    const isLight = theme === 'light';
+    if (isLight) {
+        document.documentElement.setAttribute('data-theme', 'light');
+    } else {
+        document.documentElement.removeAttribute('data-theme');
+    }
+    if (themeToggle) {
+        themeToggle.setAttribute('aria-pressed', String(isLight));
+        themeToggle.setAttribute('aria-label', isLight ? 'Switch to dark theme' : 'Switch to light theme');
+    }
+}
+
+function initTheme() {
+    let saved = null;
+    try {
+        saved = localStorage.getItem(THEME_KEY);
+    } catch (e) { /* localStorage may be unavailable */ }
+    applyTheme(saved === 'light' ? 'light' : 'dark');
+}
+
+function toggleTheme() {
+    const isCurrentlyLight = document.documentElement.getAttribute('data-theme') === 'light';
+    const next = isCurrentlyLight ? 'dark' : 'light';
+    try {
+        localStorage.setItem(THEME_KEY, next);
+    } catch (e) { /* localStorage may be unavailable */ }
+    applyTheme(next);
+}
 
 // Event Listeners
 function setupEventListeners() {
@@ -42,6 +77,9 @@ function setupEventListeners() {
 
     // New chat button
     newChatButton.addEventListener('click', startNewChat);
+
+    // Theme toggle (native <button>, so Enter/Space already activate it)
+    themeToggle.addEventListener('click', toggleTheme);
 }
 
 async function startNewChat() {
