@@ -2,6 +2,9 @@
 .env
 backend/.env
 
+# Node / front-end tooling
+node_modules/
+
 # Python
 __pycache__/
 *.py[cod]
@@ -25,6 +28,9 @@ uploads/
 .idea/
 *.swp
 *.swo
+
+# Claude Code (per-user overrides)
+.claude/settings.local.json
 
 # OS
 .DS_Store

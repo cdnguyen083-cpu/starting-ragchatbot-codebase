@@ -89,29 +89,112 @@ class CourseSearchTool(Tool):
         """Format search results with course and lesson context"""
         formatted = []
         sources = []  # Track sources for the UI
-        
+        seen_sources = set()  # Dedup chips when multiple chunks share a lesson
+
         for doc, meta in zip(results.documents, results.metadata):
             course_title = meta.get('course_title', 'unknown')
             lesson_num = meta.get('lesson_number')
-            
+
             # Build context header
             header = f"[{course_title}"
             if lesson_num is not None:
                 header += f" - Lesson {lesson_num}"
             header += "]"
-            
-            # Track source for the UI
-            source = course_title
-            if lesson_num is not None:
-                source += f" - Lesson {lesson_num}"
-            sources.append(source)
-            
+
             formatted.append(f"{header}\n{doc}")
-        
+
+            source_key = (course_title, lesson_num)
+            if source_key in seen_sources:
+                continue
+            seen_sources.add(source_key)
+
+            source_label = course_title
+            if lesson_num is not None:
+                source_label += f" - Lesson {lesson_num}"
+            source_url = (
+                self.store.get_lesson_link(course_title, lesson_num)
+                if lesson_num is not None
+                else None
+            )
+            sources.append({"label": source_label, "url": source_url})
+
         # Store sources for retrieval
         self.last_sources = sources
-        
+
         return "\n\n".join(formatted)
+
+
+class CourseOutlineTool(Tool):
+    """Tool for returning a course's outline (title, instructor, link, lesson list)"""
+
+    def __init__(self, vector_store: VectorStore):
+        self.store = vector_store
+        self.last_sources = []
+
+    def get_tool_definition(self) -> Dict[str, Any]:
+        return {
+            "name": "get_course_outline",
+            "description": (
+                "Return the outline of a course: course title, instructor, course link, "
+                "and the full list of lessons with their numbers and titles. Use this "
+                "for outline, syllabus, structure, table-of-contents, or list-of-lessons "
+                "questions."
+            ),
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "course_name": {
+                        "type": "string",
+                        "description": "Course title (partial matches work, e.g. 'MCP', 'Introduction')"
+                    }
+                },
+                "required": ["course_name"]
+            }
+        }
+
+    def execute(self, course_name: str) -> str:
+        import json
+
+        resolved_title = self.store._resolve_course_name(course_name)
+        if not resolved_title:
+            return f"No course found matching '{course_name}'."
+
+        try:
+            result = self.store.course_catalog.get(ids=[resolved_title])
+        except Exception as e:
+            return f"Error fetching course outline: {e}"
+
+        if not result or not result.get("metadatas"):
+            return f"No course found matching '{course_name}'."
+
+        metadata = result["metadatas"][0]
+        instructor = metadata.get("instructor") or "Unknown"
+        course_link = metadata.get("course_link")
+        lessons = json.loads(metadata.get("lessons_json") or "[]")
+        lessons.sort(key=lambda x: x.get("lesson_number", 0))
+
+        lines = [f"Course: {resolved_title}", f"Instructor: {instructor}"]
+        if course_link:
+            lines.append(f"Course Link: {course_link}")
+        lines.append("")
+        lines.append("Lessons:")
+        for lesson in lessons:
+            num = lesson.get("lesson_number")
+            title = lesson.get("lesson_title", "")
+            lines.append(f"{num}. {title}")
+
+        sources = []
+        for lesson in lessons:
+            num = lesson.get("lesson_number")
+            title = lesson.get("lesson_title", "")
+            link = lesson.get("lesson_link")
+            sources.append({"label": f"Lesson {num}: {title}", "url": link})
+        if not sources and course_link:
+            sources.append({"label": resolved_title, "url": course_link})
+        self.last_sources = sources
+
+        return "\n".join(lines)
+
 
 class ToolManager:
     """Manages available tools for the AI"""

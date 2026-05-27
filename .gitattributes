@@ -1,0 +1,5 @@
+# Pin LF line endings for front-end files so Prettier's `endOfLine: "lf"`
+# check stays consistent across platforms (avoids CRLF churn on Windows).
+frontend/*.js   text eol=lf
+frontend/*.css  text eol=lf
+frontend/*.html text eol=lf
