@@ -17,8 +17,20 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pytest>=8.0",
+    "httpx>=0.27",  # required by fastapi.testclient.TestClient (Starlette)
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["backend/tests"]
 pythonpath = ["backend"]
+# Cleaner, more informative default output. -ra summarizes non-passing tests;
+# --strict-markers turns a typo'd marker into an error instead of a warning.
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--tb=short",
+    "--color=yes",
+]
+markers = [
+    "api: HTTP-layer tests that drive the FastAPI endpoints via TestClient",
+]
