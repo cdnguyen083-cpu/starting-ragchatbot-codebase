@@ -128,11 +128,9 @@ class RAGSystem:
             tool_manager=self.tool_manager
         )
         
-        # Get sources from the search tool
-        sources = self.tool_manager.get_last_sources()
-
-        # Reset sources after retrieving them
-        self.tool_manager.reset_sources()
+        # Sources are accumulated across tool rounds by AIGenerator and reset
+        # at the top of each generate_response call.
+        sources = list(self.ai_generator.last_call_sources)
         
         # Update conversation history
         if session_id:

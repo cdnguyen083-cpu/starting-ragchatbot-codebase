@@ -99,9 +99,12 @@ def test_query_routes_content_question_through_search_tool(mock_anthropic, fake_
 
 
 @patch("ai_generator.anthropic.Anthropic")
-def test_query_resets_sources_after_returning(mock_anthropic, fake_config):
+def test_sources_do_not_leak_between_queries(mock_anthropic, fake_config):
+    """A query that doesn't search must not surface sources from a prior search."""
     mock_client = MagicMock()
     mock_anthropic.return_value = mock_client
+
+    # Call 1: search round + text. Call 2: pure text, no tools used.
     mock_client.messages.create.side_effect = [
         _make_response(
             content=[
@@ -110,6 +113,7 @@ def test_query_resets_sources_after_returning(mock_anthropic, fake_config):
             stop_reason="tool_use",
         ),
         _make_response(content=[_text_block("a")], stop_reason="end_turn"),
+        _make_response(content=[_text_block("general")], stop_reason="end_turn"),
     ]
 
     rag = RAGSystem(fake_config)
@@ -120,10 +124,12 @@ def test_query_resets_sources_after_returning(mock_anthropic, fake_config):
         lesson_link="u",
     )
 
-    _, sources = rag.query("q")
-    assert sources, "expected sources on first call"
-    assert rag.search_tool.last_sources == [], (
-        "RAGSystem.query must reset tool sources after returning them"
+    _, first_sources = rag.query("course-specific q")
+    assert first_sources, "expected sources on first call"
+
+    _, second_sources = rag.query("general-knowledge q")
+    assert second_sources == [], (
+        "second query did not search; sources from the first query must not leak"
     )
 
 
