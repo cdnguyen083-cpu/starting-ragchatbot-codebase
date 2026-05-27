@@ -1,0 +1,14 @@
+{
+  "name": "course-materials-assistant-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Front-end code quality tooling for the Course Materials Assistant",
+  "scripts": {
+    "format": "prettier --write \"frontend/**/*.{js,css,html}\"",
+    "format:check": "prettier --check \"frontend/**/*.{js,css,html}\"",
+    "quality": "npm run format:check"
+  },
+  "devDependencies": {
+    "prettier": "^3.4.2"
+  }
+}
